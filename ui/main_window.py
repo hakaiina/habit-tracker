@@ -1,75 +1,76 @@
 import customtkinter as ctk
-from databases.database import Database
-from models.habit import Habit
-from .habit_form import HabitForm
-from .styles import configure_app_theme
+import tkinter.messagebox as messagebox
+from databases import db_manager
+
+ctk.set_appearance_mode("system")
+ctk.set_default_color_theme("dark-blue")
+
+class MainWindow(ctk.CTk):
 
 
-class MainWindow(ctk.CTk):  # Наследуем от главного класса CustomTkinter
-    def __init__(self):
+    def __init__(self, user_id):
         super().__init__()
-        self.title("Трекер привычек")  # Заголовок окна
-        self.geometry("800x600")  # Размер окна
-        self.styles = configure_app_theme()  # Загружаем стили
-        self._setup_ui()  # Настраиваем интерфейс
-        self._load_habits()  # Загружаем привычки из БД
 
-    def _setup_ui(self):
-        """Создает элементы интерфейса"""
-        self.main_frame = ctk.CTkFrame(self)  # Основной контейнер
-        self.main_frame.pack(fill='both', expand=True, padx=20, pady=20)
+        self.user_id = user_id
+        self.title("Трекер привычек")
+        self.geometry("800x600")
+        self.resizable(False, False)
 
-        # Кнопка добавления новой привычки
-        self.add_button = ctk.CTkButton(
-            self.main_frame,
-            text="+ Добавить привычку",
-            command=self._open_habit_form,  # Привязываем обработчик
-            font=self.styles['button_font']
-        )
-        self.add_button.pack(pady=self.styles['pady'])
+        self.create_widgets()
+        self.load_habits()
 
-        # Прокручиваемый список для привычек
-        self.habits_listbox = ctk.CTkScrollableFrame(self.main_frame)
-        self.habits_listbox.pack(fill='both', expand=True)
 
-    def _load_habits(self):
-        """Загружает привычки из БД и отображает их"""
-        habits = db_operations.get_all_habits()
-        for habit_data in habits:
-            habit = Habit(**habit_data)  # Создаем объект Habit
-            self._add_habit_to_ui(habit)  # Добавляем в интерфейс
+    def create_widgets(self):
+        self.title_label = ctk.CTkLabel(self, text="Мои привычки", font=("Arial", 24))
+        self.title_label.pack(pady=10)
 
-    def _add_habit_to_ui(self, habit):
-        """Создает элемент интерфейса для одной привычки"""
-        habit_frame = ctk.CTkFrame(self.habits_listbox)
-        habit_frame.pack(fill='x', pady=5)
+        self.habit_listbox = ctk.CTkScrollableFrame(self, width=700, height=400)
+        self.habit_listbox.pack(pady=10)
 
-        # Название привычки
-        ctk.CTkLabel(
-            habit_frame,
-            text=f"{habit.name} ({habit.periodicity})",
-            font=self.styles['label_font']
-        ).pack(side='left', padx=self.styles['padx'])
+        button_frame = ctk.CTkButton(self)
+        button_frame.pack(pady=10)
 
-        # Кнопка отметки выполнения
-        ctk.CTkButton(
-            habit_frame,
-            text="✓",
-            width=30,
-            command=lambda: self._mark_completed(habit.id)
-        ).pack(side='right')
+        self.add_button = ctk.CTkButton(button_frame, text="Добавить", command=self.add_habit)
+        self.add_button.grid(row=0, column=0, padx=10)
 
-    def _open_habit_form(self):
-        """Открывает форму добавления привычки"""
-        HabitForm(self, self._refresh_habits)  # Передаем функцию обновления
+        self.edit_button = ctk.CTkButton(button_frame, text="Редактировать", command=self.edit_habit)
+        self.edit_button.grid(row=0, column=1, padx=10)
 
-    def _mark_completed(self, habit_id):
-        """Отмечает привычку как выполненную"""
-        db_operations.mark_habit_completed(habit_id)
-        # Здесь можно добавить уведомление
+        self.delete_button = ctk.CTkButton(button_frame, text="Удалить", command=self.delete_habit)
+        self.delete_button.grid(row=0, column=2, padx=10)
 
-    def _refresh_habits(self):
-        """Обновляет список привычек"""
-        for widget in self.habits_listbox.winfo_children():
-            widget.destroy()  # Удаляем все элементы
-        self._load_habits()  # Загружаем заново
+
+    def load_habits(self):
+        for widget in self.habit_listbox.winfo_children():
+            widget.destroy()
+
+        habits = db_manager.get_all_habits(self.user_id)
+
+        for habit in habits:
+            habit_id, _, name, desc, _, _ = habit
+            frame = ctk.CTkFrame(self.habit_listbox)
+            frame.pack(fill="x", pady=5, padx=10)
+
+            label = ctk.CTkLabel(frame, text=name, font=("Arial", 16))
+            label.pack(side="left", padx=5)
+
+            mark_button = ctk.CTkButton(frame, text="Выполнено", width=100, command=lambda h_id=habit_id: self.mark_done(h_id))
+            mark_button.pack(side="right", padx=5)
+
+
+    def add_habit(self):
+        messagebox.showinfo("Добавить", "Окно добавления привычки")
+
+
+    def edit_habit(self):
+        messagebox.showinfo("Редактировать", "Окно редактирования привычки")
+
+
+    def delete_habit(self):
+        messagebox.showinfo("Удалить", "Удаление привычки")
+
+
+    def mark_done(self, habit_id):
+        db_manager.add_habit_log(habit_id=habit_id, status_id=1)
+        messagebox.showinfo("Готово", "Привычка выполнена")
+

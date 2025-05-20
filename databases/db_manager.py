@@ -82,6 +82,7 @@ def get_all_habits(user_id):
     with get_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM Habits WHERE User_ID = ?", (user_id,))
+        return cursor.fetchall()
 
 
 def add_habit_log(habit_id, status_id, date_start=None, date_end=None, notes=""):
