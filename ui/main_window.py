@@ -1,6 +1,7 @@
 import customtkinter as ctk
 import tkinter.messagebox as messagebox
 from databases import db_manager
+from ui.habit_form import HabitForm
 
 ctk.set_appearance_mode("system")
 ctk.set_default_color_theme("dark-blue")
@@ -27,7 +28,7 @@ class MainWindow(ctk.CTk):
         self.habit_listbox = ctk.CTkScrollableFrame(self, width=700, height=400)
         self.habit_listbox.pack(pady=10)
 
-        button_frame = ctk.CTkButton(self)
+        button_frame = ctk.CTkFrame(self)
         button_frame.pack(pady=10)
 
         self.add_button = ctk.CTkButton(button_frame, text="Добавить", command=self.add_habit)
@@ -59,7 +60,7 @@ class MainWindow(ctk.CTk):
 
 
     def add_habit(self):
-        messagebox.showinfo("Добавить", "Окно добавления привычки")
+        HabitForm(self, user_id=self.user_id, on_save=self.load_habits)
 
 
     def edit_habit(self):

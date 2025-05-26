@@ -67,13 +67,13 @@ def add_user(username):
         return cursor.lastrowid
 
 
-def add_habit(user_id, name, description, target_days):
+def add_habit(user_id, name, desc, target_days):
     with get_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("""
             INSERT INTO Habits (User_ID, Name_habit, Description, Target_days)
             VALUES (?, ?, ?, ?)
-            """, (user_id, name, description, target_days))
+            """, (user_id, name, desc, target_days))
         conn.commit()
         return cursor.lastrowid
 
@@ -97,6 +97,16 @@ def add_habit_log(habit_id, status_id, date_start=None, date_end=None, notes="")
             """, (habit_id, status_id, date_start, date_end, notes))
         conn.commit()
         return cursor.lastrowid
+
+def update_habit(habit_id, name, desc, target_days):
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+        UPDATE Habits
+        SET Name_habit = ?, Description = ?, Target_days = ?
+        WHERE Habit_ID = ?
+        """, (name, desc, target_days, habit_id))
+        conn.commit()
 
 
 def get_logs_by_habit(habit_id):

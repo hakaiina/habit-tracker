@@ -1,46 +1,82 @@
 import customtkinter as ctk
 from tkinter import messagebox
-from databases.database import Database
-from .styles import configure_app_theme
+
+from customtkinter import CTkLabel
+
+from databases import db_manager
+from datetime import datetime
+
+class HabitForm(ctk.CTkToplevel):
+    def __init__(self, master, user_id, habit=None, on_save=None):
+        super().__init__(master)
+        self.user_id = user_id
+        self.habit = habit
+        self.on_save = on_save
+        self.title("Привычка")
+        self.geometry("400x400")
+        self.resizable(False, False)
+
+        self.create_widgets()
+        if self.habit:
+            self.fill_form()
 
 
-class HabitForm(ctk.CTkToplevel):  # Всплывающее окно
-    def __init__(self, parent, on_success):
-        super().__init__(parent)
-        self.title("Новая привычка")
-        self.geometry("400x300")
-        self.on_success = on_success  # Функция для вызова после успешного сохранения
-        self.styles = configure_app_theme()
-        self._setup_ui()
+    def create_widgets(self):
+        self.name_label = ctk.CTkLabel(self, text="Название привычки:")
+        self.name_label.pack(pady=5)
+        self.name_entry = ctk.CTkEntry(self, width=300)
+        self.name_entry.pack(pady=5)
 
-    def _setup_ui(self):
-        """Настраивает элементы формы"""
-        # Поле для названия
-        ctk.CTkLabel(self, text="Название:").pack(pady=5)
-        self.name_entry = ctk.CTkEntry(self)
-        self.name_entry.pack(fill='x', padx=20, pady=5)
+        self.desc_label = ctk.CTkLabel(self, text="Описание:")
+        self.desc_label.pack(pady=5)
+        self.desc_entry = ctk.CTkTextbox(self, width=300, height=300)
+        self.desc_entry.pack(pady=5)
 
-        # Радиокнопки для выбора периодичности
-        ctk.CTkLabel(self, text="Периодичность:").pack(pady=5)
-        self.periodicity = ctk.StringVar(value="daily")  # Значение по умолчанию
-        ctk.CTkRadioButton(self, text="Ежедневно", variable=self.periodicity, value="daily").pack(anchor='w', padx=20)
-        ctk.CTkRadioButton(self, text="Еженедельно", variable=self.periodicity, value="weekly").pack(anchor='w',
-                                                                                                     padx=20)
+        self.freq_label = ctk.CTkLabel(self, text="Периодичность:")
+        self.freq_label.pack(pady=5)
+        self.freq_option = ctk.CTkOptionMenu(self, values=["Ежедневно", "Раз в неделю", "Раз в месяц"])
+        self.freq_option.pack(pady=5)
 
-        # Кнопка сохранения
-        ctk.CTkButton(
-            self,
-            text="Сохранить",
-            command=self._save_habit
-        ).pack(pady=20)
+        self.save_button = ctk.CTkButton(self, text="Сохранить", command=self.save_habit)
+        self.save_button.pack(pady=20)
 
-    def _save_habit(self):
-        """Сохраняет новую привычку в БД"""
-        name = self.name_entry.get().strip()
+
+    def fill_form(self):
+        self.name_entry.insert(0, self.habit["Name habit"])
+        self.desc_entry.insert("1.0", self.habit["Description"] or "")
+        freq = self.habit.get("Target_days", 1)
+        if freq == 1:
+            self.freq_option.set("Ежедневно")
+        elif freq == 7:
+            self.freq_option.set("Раз в неделю")
+        elif freq == 30:
+            self.freq_option.set("Раз в месяц")
+        else:
+            self.freq_option.set("Ежедневно")
+
+
+    def save_habit(self):
+        name = self.name_entry.get()
+        desc = self.desc_entry.get("1.0", "end").strip()
+        freq_text = self.freq_option.get()
+        freq_map = {
+            "Ежедневно": 1,
+            "Раз в неделю": 7,
+            "Раз в месяц": 30
+        }
+        target_days = freq_map.get(freq_text, 1)
+
         if not name:
             messagebox.showerror("Ошибка", "Введите название привычки")
             return
 
-        db_operations.add_habit(name, self.periodicity.get())
-        self.on_success()  # Обновляем список привычек
-        self.destroy()  # Закрываем форму
+        if self.habit:
+            db_manager.update_habit(
+                habit_id=self.habit.id["Habit_ID"],
+                name=name,
+                desc=desc,
+                target_days=target_days
+            )
+        if self.on_save:
+            self.on_save()
+        self.destroy()
