@@ -7,7 +7,7 @@ class CalendarView(ctk.CTkToplevel):
     def __init__(self, master, user_id):
         super().__init__(master)
         self.title("Календарь привычек")
-        self.geometry("500x500")
+        self.geometry("370x400")
         self.resizable(False, False)
 
         self.user_id = user_id
@@ -56,9 +56,9 @@ class CalendarView(ctk.CTkToplevel):
             status = log_map.get(date_obj, "Нет данных")
 
             color_map = {
-                "Выполнено": "4CAF50",
-                "Пропущено": "F44336",
-                "Нет данных": "FFFFFF"
+                "Выполнено": "#4CAF50",
+                "Пропущено": "#F44336",
+                "Нет данных": "#FFFFFF"
             }
             btn_color = color_map.get(status, "FFFFFF")
 

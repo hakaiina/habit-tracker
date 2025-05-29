@@ -21,7 +21,6 @@ class MainWindow(ctk.CTk):
         self.create_widgets()
         self.load_habits()
 
-
     def create_widgets(self):
         self.title_label = ctk.CTkLabel(self, text="Мои привычки", font=("Arial", 24))
         self.title_label.pack(pady=10)
@@ -41,13 +40,16 @@ class MainWindow(ctk.CTk):
         self.delete_button = ctk.CTkButton(button_frame, text="Удалить", command=self.delete_habit)
         self.delete_button.grid(row=0, column=2, padx=10)
 
+        calendar_frame = ctk.CTkFrame(self)
+        calendar_frame.pack(pady=(0, 10))
+
         self.calendar_button = ctk.CTkButton(
-            button_frame,
+            calendar_frame,
             text="Календарь",
             command=self.open_calendar,
             width=120
         )
-        self.calendar_button.grid(row=2, column=1, padx=10, sticky="w")
+        self.calendar_button.pack(padx=10)
 
 
     def load_habits(self):

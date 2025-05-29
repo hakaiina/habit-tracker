@@ -92,7 +92,7 @@ def add_habit_log(habit_id, status_id, date_start=None, date_end=None, notes="")
     with get_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("""
-            INSERT INTO Habits_log (Habit_ID, Status_ID, Dare_start, Date_end, Notes)
+            INSERT INTO Habits_log (Habit_ID, Status_ID, Date_start, Date_end, Notes)
             VALUES (?, ?, ?, ?, ?)
             """, (habit_id, status_id, date_start, date_end, notes))
         conn.commit()
@@ -129,8 +129,8 @@ def get_habit_logs_by_user(user_id):
             SELECT h1.Date_start, s.Name_status
             FROM Habits_log h1
             JOIN Habits h ON h.Habit_ID = h1.Habit_ID
-            JOIN Status S ON h1.Status_ID = S.Status_ID
-            WHERE h1.User_ID = ?
+            JOIN Status s ON h1.Status_ID = s.Status_ID
+            WHERE h.User_ID = ?
         """, (user_id,))
         return cursor.fetchall()
 
@@ -142,7 +142,7 @@ def get_logs_by_date(user_id, date_str):
             SELECT H.Name_habit, HL.Date_start, S.Name_status
             FROM Habits_log HL
             JOIN Habits H ON HL.Habit_ID = H.Habit_ID
-            JOIN Status S ON HL.Status_ID = S.Status_IS
+            JOIN Status S ON HL.Status_ID = S.Status_ID
             WHERE H.User_ID = ? AND HL.Date_start = ?
         """, (user_id, date_str))
         return cursor.fetchall()
@@ -172,7 +172,7 @@ def update_habit_log(log_id, status_id=None, date_start=None, date_end=None, not
 
     with get_connection() as conn:
         cursor = conn.cursor()
-        query = f"UPDATE Habits_log SET {', '.join(fields)} WHERE Log_id = ?"
+        query = f"UPDATE Habits_log SET {', '.join(fields)} WHERE Log_ID = ?"
         cursor.execute(query, tuple(params))
         conn.commit()
         return True
