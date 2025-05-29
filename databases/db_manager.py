@@ -102,9 +102,9 @@ def update_habit(habit_id, name, desc, target_days):
     with get_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("""
-        UPDATE Habits
-        SET Name_habit = ?, Description = ?, Target_days = ?
-        WHERE Habit_ID = ?
+            UPDATE Habits
+            SET Name_habit = ?, Description = ?, Target_days = ?
+            WHERE Habit_ID = ?
         """, (name, desc, target_days, habit_id))
         conn.commit()
 
@@ -113,12 +113,25 @@ def get_logs_by_habit(habit_id):
     with get_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("""
-        SELECT HL.Log_ID, HL.Date_start, HL.Date_end, HL.Notes, S.Name_status
-        FROM Habits_log HL
-        JOIN Status S ON HL.Status_ID = S.Status_ID
-        WHERE HL.Habit_ID = ?
-        ORDER BY HL.Date_start DESC
+            SELECT HL.Log_ID, HL.Date_start, HL.Date_end, HL.Notes, S.Name_status
+            FROM Habits_log HL
+            JOIN Status S ON HL.Status_ID = S.Status_ID
+            WHERE HL.Habit_ID = ?
+            ORDER BY HL.Date_start DESC
         """, (habit_id,))
+        return cursor.fetchall()
+
+
+def get_habit_logs_by_user(user_id):
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT h1.Date_start, s.Name_status
+            FROM Habits_log h1
+            JOIN Habits h ON h.Habit_ID = h1.Habit_ID
+            JOIN Status S ON h1.Status_ID = S.Status_ID
+            WHERE h1.User_ID = ?
+        """, (user_id,))
         return cursor.fetchall()
 
 
@@ -131,7 +144,7 @@ def get_logs_by_date(user_id, date_str):
             JOIN Habits H ON HL.Habit_ID = H.Habit_ID
             JOIN Status S ON HL.Status_ID = S.Status_IS
             WHERE H.User_ID = ? AND HL.Date_start = ?
-            """, (user_id, date_str))
+        """, (user_id, date_str))
         return cursor.fetchall()
 
 

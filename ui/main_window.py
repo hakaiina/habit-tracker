@@ -2,6 +2,7 @@ import customtkinter as ctk
 import tkinter.messagebox as messagebox
 from databases import db_manager
 from ui.habit_form import HabitForm
+from ui.calendar_view import CalendarView
 
 ctk.set_appearance_mode("system")
 ctk.set_default_color_theme("dark-blue")
@@ -40,6 +41,14 @@ class MainWindow(ctk.CTk):
         self.delete_button = ctk.CTkButton(button_frame, text="Удалить", command=self.delete_habit)
         self.delete_button.grid(row=0, column=2, padx=10)
 
+        self.calendar_button = ctk.CTkButton(
+            button_frame,
+            text="Календарь",
+            command=self.open_calendar,
+            width=120
+        )
+        self.calendar_button.grid(row=2, column=1, padx=10, sticky="w")
+
 
     def load_habits(self):
         for widget in self.habit_listbox.winfo_children():
@@ -74,4 +83,8 @@ class MainWindow(ctk.CTk):
     def mark_done(self, habit_id):
         db_manager.add_habit_log(habit_id=habit_id, status_id=1)
         messagebox.showinfo("Готово", "Привычка выполнена")
+
+    def open_calendar(self):
+        CalendarView(self, self.user_id)
+
 

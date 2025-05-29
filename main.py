@@ -1,6 +1,6 @@
 from databases.db_manager import init_db, add_user
 from ui.main_window import MainWindow
-from  ui.habit_form import HabitForm
+
 
 if __name__ == "__main__":
     init_db()
