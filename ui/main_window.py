@@ -1,92 +1,95 @@
 import customtkinter as ctk
-import tkinter.messagebox as messagebox
+from pyexpat.errors import messages
+
 from databases import db_manager
 from ui.habit_form import HabitForm
 from ui.calendar_view import CalendarView
-
-ctk.set_appearance_mode("system")
-ctk.set_default_color_theme("dark-blue")
+from ui.stats_view import StatsView
+from datetime import datetime
 
 class MainWindow(ctk.CTk):
-
-
     def __init__(self, user_id):
         super().__init__()
-
         self.user_id = user_id
         self.title("Трекер привычек")
-        self.geometry("800x600")
+        self.geometry("1000x500")
         self.resizable(False, False)
 
         self.create_widgets()
         self.load_habits()
 
     def create_widgets(self):
-        self.title_label = ctk.CTkLabel(self, text="Мои привычки", font=("Arial", 24))
-        self.title_label.pack(pady=10)
+        self.scrollable_frame = ctk.CTkScrollableFrame(self, width=680, height=400)
+        self.scrollable_frame.pack(pady=20)
 
-        self.habit_listbox = ctk.CTkScrollableFrame(self, width=700, height=400)
-        self.habit_listbox.pack(pady=10)
-
-        button_frame = ctk.CTkFrame(self)
-        button_frame.pack(pady=10)
-
-        self.add_button = ctk.CTkButton(button_frame, text="Добавить", command=self.add_habit)
-        self.add_button.grid(row=0, column=0, padx=10)
-
-        self.edit_button = ctk.CTkButton(button_frame, text="Редактировать", command=self.edit_habit)
-        self.edit_button.grid(row=0, column=1, padx=10)
-
-        self.delete_button = ctk.CTkButton(button_frame, text="Удалить", command=self.delete_habit)
-        self.delete_button.grid(row=0, column=2, padx=10)
-
-        calendar_frame = ctk.CTkFrame(self)
-        calendar_frame.pack(pady=(0, 10))
-
-        self.calendar_button = ctk.CTkButton(
-            calendar_frame,
-            text="Календарь",
-            command=self.open_calendar,
-            width=120
-        )
-        self.calendar_button.pack(padx=10)
-
+        self.add_button = ctk.CTkButton(self, text="Добавить привычку", command=self.open_add_habit_window)
+        self.add_button.pack(pady=10)
 
     def load_habits(self):
-        for widget in self.habit_listbox.winfo_children():
+        # Очистка фрейма
+        for widget in self.scrollable_frame.winfo_children():
             widget.destroy()
 
-        habits = db_manager.get_all_habits(self.user_id)
+        habits = db_manager.get_habits_by_user(self.user_id)
+        if not habits:
+            no_data_label = ctk.CTkLabel(self.scrollable_frame, text="Нет добавленных привычек.")
+            no_data_label.pack(pady=20)
+            return
 
         for habit in habits:
-            habit_id, _, name, desc, _, _ = habit
-            frame = ctk.CTkFrame(self.habit_listbox)
-            frame.pack(fill="x", pady=5, padx=10)
+            frame = ctk.CTkFrame(self.scrollable_frame, corner_radius=10)
+            frame.pack(fill='x', padx=10, pady=5)
 
-            label = ctk.CTkLabel(frame, text=name, font=("Arial", 16))
-            label.pack(side="left", padx=5)
+            name_label = ctk.CTkLabel(frame, text=habit["Name_habit"], font=("Arial", 16, "bold"))
+            name_label.grid(row=0, column=0, padx=10, pady=10, sticky="w")
 
-            mark_button = ctk.CTkButton(frame, text="Выполнено", width=100, command=lambda h_id=habit_id: self.mark_done(h_id))
-            mark_button.pack(side="right", padx=5)
+            button_frame = ctk.CTkFrame(frame, fg_color="transparent")
+            button_frame.grid(row=0, column=1, sticky="e", padx=10)
 
+            ctk.CTkButton(button_frame, text="✅ Выполнить", width=100,
+                          command=lambda h=habit: self.mark_habit_done(h)).pack(side="left", padx=2)
 
-    def add_habit(self):
-        HabitForm(self, user_id=self.user_id, on_save=self.load_habits)
+            ctk.CTkButton(button_frame, text="✏️ Редактировать", width=110,
+                          command=lambda h=habit: self.open_edit_habit_window(h)).pack(side="left", padx=2)
 
+            ctk.CTkButton(button_frame, text="🗑 Удалить", width=80,
+                          command=lambda h=habit: self.delete_habit(h["Habit_ID"])).pack(side="left", padx=2)
 
-    def edit_habit(self):
-        messagebox.showinfo("Редактировать", "Окно редактирования привычки")
+            ctk.CTkButton(button_frame, text="📊 Статистика", width=100,
+                          command=lambda h=habit: self.open_stats(h)).pack(side="left", padx=2)
 
+            ctk.CTkButton(button_frame, text="📅 Календарь", width=90,
+                          command=lambda h=habit: self.open_calendar(h)).pack(side="left", padx=2)
 
-    def delete_habit(self):
-        messagebox.showinfo("Удалить", "Удаление привычки")
+    def open_add_habit_window(self):
+        HabitForm(self, self.user_id, on_save=self.load_habits)
 
+    def open_edit_habit_window(self, habit):
+        HabitForm(self, self.user_id, habit=habit, on_save=self.load_habits)
 
-    def mark_done(self, habit_id):
-        db_manager.add_habit_log(habit_id=habit_id, status_id=1)
-        messagebox.showinfo("Готово", "Привычка выполнена")
+    def delete_habit(self, habit_id):
+        db_manager.delete_habit(habit_id)
+        self.load_habits()
 
-    def open_calendar(self):
-        CalendarView(self, self.user_id)
+    def open_calendar(self, habit):
+        CalendarView(self, habit["Habit_ID"])
 
+    def open_stats(self, habit):
+        StatsView(self, habit)
 
+    def mark_habit_done(self, habit):
+        today = datetime.now().date().isoformat()
+
+        existing_logs = db_manager.get_habit_log_by_date(habit["Habit_ID"], today)
+        if existing_logs:
+            ctk.CTkMessagebox(title="Уже выполнено", message="Привычка уже отмечена на сегодня")
+            return
+
+        db_manager.log_habit_status(
+            habit_id = habit["Habit_ID"],
+            status_id=1,
+            date_start=today,
+            date_end=today,
+            notes=""
+        )
+        ctk.CTkMessagebox(title="Успех", message="Привычка отмечена как выполненная")

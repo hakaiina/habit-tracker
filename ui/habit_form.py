@@ -1,10 +1,6 @@
 import customtkinter as ctk
 from tkinter import messagebox
-
-from customtkinter import CTkLabel
-
 from databases import db_manager
-from datetime import datetime
 
 class HabitForm(ctk.CTkToplevel):
     def __init__(self, master, user_id, habit=None, on_save=None):
@@ -20,7 +16,6 @@ class HabitForm(ctk.CTkToplevel):
         if self.habit:
             self.fill_form()
 
-
     def create_widgets(self):
         self.name_label = ctk.CTkLabel(self, text="Название привычки:")
         self.name_label.pack(pady=5)
@@ -29,20 +24,20 @@ class HabitForm(ctk.CTkToplevel):
 
         self.desc_label = ctk.CTkLabel(self, text="Описание:")
         self.desc_label.pack(pady=5)
-        self.desc_entry = ctk.CTkTextbox(self, width=300, height=300)
+        self.desc_entry = ctk.CTkTextbox(self, width=300, height=100)
         self.desc_entry.pack(pady=5)
 
         self.freq_label = ctk.CTkLabel(self, text="Периодичность:")
         self.freq_label.pack(pady=5)
         self.freq_option = ctk.CTkOptionMenu(self, values=["Ежедневно", "Раз в неделю", "Раз в месяц"])
+        self.freq_option.set("Ежедневно")
         self.freq_option.pack(pady=5)
 
         self.save_button = ctk.CTkButton(self, text="Сохранить", command=self.save_habit)
         self.save_button.pack(pady=20)
 
-
     def fill_form(self):
-        self.name_entry.insert(0, self.habit["Name habit"])
+        self.name_entry.insert(0, self.habit["Name_habit"])
         self.desc_entry.insert("1.0", self.habit["Description"] or "")
         freq = self.habit.get("Target_days", 1)
         if freq == 1:
@@ -53,7 +48,6 @@ class HabitForm(ctk.CTkToplevel):
             self.freq_option.set("Раз в месяц")
         else:
             self.freq_option.set("Ежедневно")
-
 
     def save_habit(self):
         name = self.name_entry.get()
@@ -72,11 +66,20 @@ class HabitForm(ctk.CTkToplevel):
 
         if self.habit:
             db_manager.update_habit(
-                habit_id=self.habit.id["Habit_ID"],
+                habit_id=self.habit["Habit_ID"],
                 name=name,
                 desc=desc,
                 target_days=target_days
             )
+        else:
+            db_manager.add_habit(
+                user_id=self.user_id,
+                name=name,
+                desc=desc,
+                target_days=target_days
+            )
+
         if self.on_save:
             self.on_save()
+
         self.destroy()
