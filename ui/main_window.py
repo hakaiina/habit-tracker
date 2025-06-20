@@ -1,5 +1,5 @@
 import customtkinter as ctk
-from pyexpat.errors import messages
+import tkinter.messagebox as messagebox
 
 from databases import db_manager
 from ui.habit_form import HabitForm
@@ -12,14 +12,14 @@ class MainWindow(ctk.CTk):
         super().__init__()
         self.user_id = user_id
         self.title("Трекер привычек")
-        self.geometry("1000x500")
+        self.geometry("800x500")
         self.resizable(False, False)
 
         self.create_widgets()
         self.load_habits()
 
     def create_widgets(self):
-        self.scrollable_frame = ctk.CTkScrollableFrame(self, width=680, height=400)
+        self.scrollable_frame = ctk.CTkScrollableFrame(self, width=700, height=400)
         self.scrollable_frame.pack(pady=20)
 
         self.add_button = ctk.CTkButton(self, text="Добавить привычку", command=self.open_add_habit_window)
@@ -37,29 +37,46 @@ class MainWindow(ctk.CTk):
             return
 
         for habit in habits:
-            frame = ctk.CTkFrame(self.scrollable_frame, corner_radius=10)
-            frame.pack(fill='x', padx=10, pady=5)
+            stats = db_manager.get_enhanced_stats(habit["Habit_ID"])
+            self.create_habit_widget(habit, stats)
 
-            name_label = ctk.CTkLabel(frame, text=habit["Name_habit"], font=("Arial", 16, "bold"))
-            name_label.grid(row=0, column=0, padx=10, pady=10, sticky="w")
+    def create_habit_widget(self, habit, stats):
+        frame = ctk.CTkFrame(self.scrollable_frame, corner_radius=10)
+        frame.pack(fill='x', padx=10, pady=5, expand=True)
 
-            button_frame = ctk.CTkFrame(frame, fg_color="transparent")
-            button_frame.grid(row=0, column=1, sticky="e", padx=10)
+        # Верхняя строка - название и статистика
+        top_frame = ctk.CTkFrame(frame, fg_color="transparent")
+        top_frame.pack(fill='x', pady=(0, 5))
 
-            ctk.CTkButton(button_frame, text="✅ Выполнить", width=100,
-                          command=lambda h=habit: self.mark_habit_done(h)).pack(side="left", padx=2)
+        name_label = ctk.CTkLabel(
+            top_frame,
+            text=f"{habit['Name_habit']} (серия: {stats['current_week']}/{habit['Target_days']})",
+            font=("Arial", 14),
+            anchor="w"
+        )
+        name_label.pack(side='left', fill='x', expand=True)
 
-            ctk.CTkButton(button_frame, text="✏️ Редактировать", width=110,
-                          command=lambda h=habit: self.open_edit_habit_window(h)).pack(side="left", padx=2)
+        # Нижняя строка - все кнопки
+        bottom_frame = ctk.CTkFrame(frame, fg_color="transparent")
+        bottom_frame.pack(fill='x')
 
-            ctk.CTkButton(button_frame, text="🗑 Удалить", width=80,
-                          command=lambda h=habit: self.delete_habit(h["Habit_ID"])).pack(side="left", padx=2)
+        # Кнопки в один ряд
+        buttons = [
+            ("✅ Выполнить", 100, lambda h=habit: self.mark_habit_done(h)),
+            ("✏️ Редактировать", 110, lambda h=habit: self.open_edit_habit_window(h)),
+            ("🗑 Удалить", 80, lambda h=habit: self.delete_habit(h["Habit_ID"])),
+            ("📊 Статистика", 100, lambda h=habit: self.open_stats(h)),
+            ("📅 Календарь", 90, lambda h=habit: self.open_calendar(h))
+        ]
 
-            ctk.CTkButton(button_frame, text="📊 Статистика", width=100,
-                          command=lambda h=habit: self.open_stats(h)).pack(side="left", padx=2)
+        for text, width, command in buttons:
+            ctk.CTkButton(
+                bottom_frame,
+                text=text,
+                width=width,
+                command=command
+            ).pack(side='left', padx=2)
 
-            ctk.CTkButton(button_frame, text="📅 Календарь", width=90,
-                          command=lambda h=habit: self.open_calendar(h)).pack(side="left", padx=2)
 
     def open_add_habit_window(self):
         HabitForm(self, self.user_id, on_save=self.load_habits)
@@ -80,16 +97,23 @@ class MainWindow(ctk.CTk):
     def mark_habit_done(self, habit):
         today = datetime.now().date().isoformat()
 
+        # Проверяем, не отмечена ли уже привычка сегодня
         existing_logs = db_manager.get_habit_log_by_date(habit["Habit_ID"], today)
         if existing_logs:
-            ctk.CTkMessagebox(title="Уже выполнено", message="Привычка уже отмечена на сегодня")
+            messagebox.showinfo("Информация", "Эта привычка уже отмечена сегодня")
             return
 
-        db_manager.log_habit_status(
-            habit_id = habit["Habit_ID"],
-            status_id=1,
-            date_start=today,
-            date_end=today,
-            notes=""
-        )
-        ctk.CTkMessagebox(title="Успех", message="Привычка отмечена как выполненная")
+        try:
+            # Логируем выполнение
+            db_manager.log_habit_status(
+                habit_id=habit["Habit_ID"],
+                completed=True,
+                log_date=today
+            )
+
+            # Обновляем интерфейс
+            self.load_habits()
+            messagebox.showinfo("Успех", f"Привычка '{habit['Name_habit']}' отмечена!")
+
+        except Exception as e:
+            messagebox.showerror("Ошибка", f"Не удалось отметить привычку: {str(e)}")
